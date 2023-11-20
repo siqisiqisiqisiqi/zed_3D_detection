@@ -1,0 +1,7 @@
+<launch>
+    <arg name="param_fp" default="$(find zed_3D_detection)/params" />
+    <node name="ObjectDection" pkg="zed_3D_detection" type="test_node.py" output="screen">
+        <param name="~param_fp" value="$(arg param_fp)"/>
+    </node>
+
+</launch>

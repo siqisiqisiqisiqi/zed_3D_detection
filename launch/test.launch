@@ -7,4 +7,8 @@
         <param name="~param_fp" value="$(arg param_fp)"/>
     </node>
 
+    <node name="Bounding_Box_Visual" pkg="zed_3D_detection" type="visualization.py" output="screen">
+        <param name="~param_fp" value="$(arg param_fp)"/>
+    </node>
+
 </launch>

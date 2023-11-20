@@ -20,20 +20,27 @@ class CameraExCalib:
         camera_info = rospy.wait_for_message(
             "zed2i/zed_node/rgb/camera_info", CameraInfo)
 
+        self.param_fp = rospy.get_param("~param_fp")
+
         rospy.sleep(1)
-        self.mtx = np.array(camera_info.K).reshape(3, 3)
+        mtx = np.array(camera_info.K).reshape(3, 3)
+        # Due to the image downsample factor
+        Mat_fact = np.array([[0.5, 0, 0], [0, 0.5, 0], [0, 0, 1]])
+        self.mtx = Mat_fact @ mtx
+        self.mtx = mtx
+        
         self.dist = np.array([[0, 0, 0, 0, 0]]).astype("float64")
 
         self.rvecs = None
         self.tvecs = None
 
-        self.param_fp = rospy.get_param("~param_fp")
-
-        self.chess_size = 1
+        # unit in meter
+        self.chess_size = 23 * 1e-3
 
     def get_image(self, data):
         try:
             self.cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            # rospy.loginfo(f"The shape of the image is {self.cv_image.shape}.")
         except CvBridgeError as e:
             print(e)
 
@@ -53,7 +60,7 @@ class CameraExCalib:
                     cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
         objp = np.zeros((6 * 9, 3), np.float32)
         objp[:, :2] = np.mgrid[0:9, 0:6].T.reshape(-1, 2)
-        axis = np.float32([[3, 0, 0], [0, 3, 0], [0, 0, -3]]).reshape(-1, 3)
+        axis = np.float32([[3, 0, 0], [0, 6, 0], [0, 0, -9]]).reshape(-1, 3)
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         ret, corners = cv2.findChessboardCorners(gray, (9, 6), None)
