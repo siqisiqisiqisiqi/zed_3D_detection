@@ -43,9 +43,9 @@ class CameraCalib:
             'corners', Float64MultiArray, queue_size=10)
 
         self.param_fp = rospy.get_param("~param_fp")
-        with np.load(self.param_fp + '/E2.npz') as X:
+        with np.load(self.param_fp + '/E1.npz') as X:
             self.mtx, self.dist, self.Mat, self.tvecs = [
-                X[i] for i in ("mtx", "dist", "Mat", "tvecs")]
+                X[i] for i in ("mtx", "dist", "Mat", "tvec")]
 
         # Init the yolo model
         self.model = YOLO(self.param_fp + '/best.pt')
@@ -64,7 +64,8 @@ class CameraCalib:
         self.points = None
         self.cv_image = None
         self.color = None
-        self.shape = (540, 960)
+        # self.shape = (540, 960)
+        self.shape = (720, 1280)
         self.rate = rospy.Rate(10)
 
     def get_pointcloud(self, data):
@@ -125,7 +126,7 @@ class CameraCalib:
             img = np.copy(self.cv_image)
             results = self.model(img)
 
-            # # visualize the segment result
+            # visualize the segment result
             # for r in results:
             #     im_array = r.plot()
             #     cv2.imshow("image", im_array)
@@ -166,12 +167,12 @@ class CameraCalib:
                     rospy.loginfo(f"the corner value is {corners[0]}")
                     self.corner_pub.publish(corner_to_send)
 
-                    ################################################ Cropped Pointcloud visualization###############################################################
+        ################################################ Cropped Pointcloud visualization###############################################################
 
-                    # pcd = o3d.geometry.PointCloud()
-                    # pcd.points = o3d.utility.Vector3dVector(seg_p[:, :3])
-                    # pcd.colors = o3d.utility.Vector3dVector(rgba[:, :3])
-                    # o3d.visualization.draw_geometries([pcd])
+            # pcd = o3d.geometry.PointCloud()
+            # pcd.points = o3d.utility.Vector3dVector(seg_p[:, :3])
+            # pcd.colors = o3d.utility.Vector3dVector(rgba[:, :3])
+            # o3d.visualization.draw_geometries([pcd])
             self.rate.sleep()
 
         # pcd = o3d.geometry.PointCloud()

@@ -5,6 +5,7 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image, CameraInfo
 import numpy as np
+from numpy.linalg import inv
 
 
 class CameraExCalib:
@@ -25,10 +26,11 @@ class CameraExCalib:
         rospy.sleep(1)
         mtx = np.array(camera_info.K).reshape(3, 3)
         # Due to the image downsample factor
-        Mat_fact = np.array([[0.5, 0, 0], [0, 0.5, 0], [0, 0, 1]])
+        # Mat_fact = np.array([[0.5, 0, 0], [0, 0.5, 0], [0, 0, 1]])
+        M1 = np.array([[0, -1, 0], [0, 0, -1], [1, 0, 0]])
+        Mat_fact = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
         self.mtx = Mat_fact @ mtx
-        self.mtx = mtx
-        
+
         self.dist = np.array([[0, 0, 0, 0, 0]]).astype("float64")
 
         self.rvecs = None

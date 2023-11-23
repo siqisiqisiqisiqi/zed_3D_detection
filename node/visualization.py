@@ -25,9 +25,9 @@ class visualization:
 
         # Get the calibration parameters
         self.param_fp = rospy.get_param("~param_fp")
-        with np.load(self.param_fp + '/E1.npz') as X:
+        with np.load(self.param_fp + '/E2.npz') as X:
             self.mtx, self.dist, self.Mat, self.tvecs = [
-                X[i] for i in ("mtx", "dist", "Mat", "tvecs")]
+                X[i] for i in ("mtx", "dist", "Mat", "tvec")]
 
         # Define the color used to visualized
         self.colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255),
@@ -38,15 +38,20 @@ class visualization:
     def get_image(self, data):
         try:
             self.cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            rospy.loginfo(f"the shape of the image is {self.cv_image.shape}.")
         except CvBridgeError as e:
             print(e)
 
     def get_corners(self, data):
         try:
-            corners = np.array(data.data).reshape((8, 3))
+            self.corners = np.array(data.data).reshape((8, 3))
             # convert centimeter to meter
-            self.corners = corners / 100.0
-            rospy.loginfo(f" the corners value is {self.corners}")
+            # self.corners = corners / 100.0
+
+            # self.corners = np.array([[5, 20, 10], [5, 13, 10], [-2, 13, 10], [-2, 20, 10], [
+            #                         5, 20, 0], [5, 13, 0], [-2, 13, 0], [-2, 20, 0]])
+            self.corners = self.corners / 100
+            # rospy.loginfo(f" the corners value is {self.corners}")
 
         except:
             rospy.loginfo(f"Not detect the peach.")
@@ -59,8 +64,9 @@ class visualization:
         corner_image = (self.mtx @ corner_camera).T
         corner = corner_image[:, :2] / corner_image[:, 2:3]
         corner = corner.astype(int)
-        corner[:, 0] = 770 - corner[:, 0]
-        corner[:, 1] = corner[:, 1] - 70
+        rospy.loginfo(f"the corner value in pixel is {corner}")
+        # corner[:, 0] = 770 - corner[:, 0]
+        # corner[:, 1] = corner[:, 1] - 70
 
         corner1 = corner[:4, :]
         corner2 = corner[4:8, :]
