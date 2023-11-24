@@ -2,9 +2,7 @@
 import cv2
 import rospy
 import numpy as np
-from numpy.linalg import inv
 from sensor_msgs.msg import Image
-from std_msgs.msg import Float64MultiArray
 from cv_bridge import CvBridge, CvBridgeError
 
 from zed_3D_detection.msg import Box3d
@@ -23,7 +21,6 @@ class visualization:
                          Image, self.get_image)
 
         # Init corners subscribers
-        rospy.Subscriber("/corners", Float64MultiArray, self.get_corners)
         rospy.Subscriber("/corners_test", Box3d, self.get_corners_data)
 
         # Get the calibration parameters
@@ -45,14 +42,6 @@ class visualization:
             self.cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
         except CvBridgeError as e:
             print(e)
-
-    def get_corners(self, data):
-        try:
-            self.corners = np.array(data.data).reshape((8, 3))
-            self.corners = self.corners / 100
-
-        except:
-            rospy.loginfo(f"Not detect the peach.")
 
     def get_corners_data(self, data):
         corner_data = []
@@ -116,10 +105,8 @@ class visualization:
         while not rospy.is_shutdown():
             try:
                 self.visualization()
-                # rospy.loginfo("This is a test.")
             except:
                 rospy.loginfo("Have not detected the peach.")
-            # self.visualization()
             self.rate.sleep()
 
 

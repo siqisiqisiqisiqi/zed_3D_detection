@@ -17,7 +17,6 @@ from numpy.linalg import inv
 import open3d as o3d
 from ultralytics import YOLO
 from sensor_msgs.msg import Image, PointCloud2
-from std_msgs.msg import Float64MultiArray
 from cv_bridge import CvBridge, CvBridgeError
 
 from models.amodal_3D_model import Amodal3DModel
@@ -38,10 +37,6 @@ class CameraCalib:
         # Init subscribers
         rospy.Subscriber("zed2i/zed_node/point_cloud/cloud_registered",
                          PointCloud2, self.get_pointcloud)
-
-        # Init the result corner publisher
-        # self.corner_pub = rospy.Publisher(
-        #     'corners', Float64MultiArray, queue_size=10)
 
         self.corner_pub2 = rospy.Publisher(
             'corners_test', Box3d, queue_size=10)
@@ -170,10 +165,6 @@ class CameraCalib:
                     features = features.to(self.device, dtype=torch.float)
                     with torch.no_grad():
                         corners = self.model3D(features)
-                    # corner_to_send = Float64MultiArray()
-                    # corner_to_send.data = np.ravel(corners[0]).tolist()
-                    # rospy.loginfo(f"the corner value is {corners[0]}")
-                    # self.corner_pub.publish(corner_to_send)
 
                     corner_to_send_test = Corners()
                     corner_to_send_test.data = np.ravel(corners[0]).tolist()
