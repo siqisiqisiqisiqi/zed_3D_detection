@@ -45,11 +45,6 @@ class visualization:
     def get_corners(self, data):
         try:
             self.corners = np.array(data.data).reshape((8, 3))
-            # convert centimeter to meter
-            # self.corners = corners / 100.0
-
-            # self.corners = np.array([[5, 20, 10], [5, 13, 10], [-2, 13, 10], [-2, 20, 10], [
-            #                         5, 20, 0], [5, 13, 0], [-2, 13, 0], [-2, 20, 0]])
             self.corners = self.corners / 100
             # rospy.loginfo(f" the corners value is {self.corners}")
 
@@ -65,8 +60,6 @@ class visualization:
         corner = corner_image[:, :2] / corner_image[:, 2:3]
         corner = corner.astype(int)
         rospy.loginfo(f"the corner value in pixel is {corner}")
-        # corner[:, 0] = 770 - corner[:, 0]
-        # corner[:, 1] = corner[:, 1] - 70
 
         corner1 = corner[:4, :]
         corner2 = corner[4:8, :]
