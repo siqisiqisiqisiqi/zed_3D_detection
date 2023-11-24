@@ -21,6 +21,7 @@ from std_msgs.msg import Float64MultiArray
 from cv_bridge import CvBridge, CvBridgeError
 
 from models.amodal_3D_model import Amodal3DModel
+from zed_3D_detection.msg import Box3d, Corners
 from src.params import *
 
 
@@ -39,8 +40,11 @@ class CameraCalib:
                          PointCloud2, self.get_pointcloud)
 
         # Init the result corner publisher
-        self.corner_pub = rospy.Publisher(
-            'corners', Float64MultiArray, queue_size=10)
+        # self.corner_pub = rospy.Publisher(
+        #     'corners', Float64MultiArray, queue_size=10)
+
+        self.corner_pub2 = rospy.Publisher(
+            'corners_test', Box3d, queue_size=10)
 
         self.param_fp = rospy.get_param("~param_fp")
         with np.load(self.param_fp + '/E1.npz') as X:
@@ -135,12 +139,16 @@ class CameraCalib:
             if results[0].masks is not None:
                 mask_result = results[0].masks.data.cpu().detach().numpy()
                 size = mask_result.shape
+                corner_data_send = Box3d()
+                corner_data_send.num = size[0]
+
                 for num in range(size[0]):
 
                     ################################### Crop the pointcloud according to the segmentation###########################
                     conf = results[0].boxes.conf[num].cpu().detach().numpy()
                     if conf < 0.9:
                         continue
+
                     mask = mask_result[num]
                     mask = cv2.resize(mask, (self.shape[1], self.shape[0]),
                                       interpolation=cv2.INTER_LINEAR)
@@ -162,10 +170,16 @@ class CameraCalib:
                     features = features.to(self.device, dtype=torch.float)
                     with torch.no_grad():
                         corners = self.model3D(features)
-                    corner_to_send = Float64MultiArray()
-                    corner_to_send.data = np.ravel(corners[0]).tolist()
-                    rospy.loginfo(f"the corner value is {corners[0]}")
-                    self.corner_pub.publish(corner_to_send)
+                    # corner_to_send = Float64MultiArray()
+                    # corner_to_send.data = np.ravel(corners[0]).tolist()
+                    # rospy.loginfo(f"the corner value is {corners[0]}")
+                    # self.corner_pub.publish(corner_to_send)
+
+                    corner_to_send_test = Corners()
+                    corner_to_send_test.data = np.ravel(corners[0]).tolist()
+                    corner_data_send.corners_data.append(corner_to_send_test)
+
+                self.corner_pub2.publish(corner_data_send)
 
         ################################################ Cropped Pointcloud visualization###############################################################
 
