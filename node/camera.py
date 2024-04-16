@@ -14,10 +14,10 @@ import ros_numpy
 import numpy as np
 from numpy import ndarray
 from numpy.linalg import inv
-import open3d as o3d
 from ultralytics import YOLO
 from sensor_msgs.msg import Image, PointCloud2
 from cv_bridge import CvBridge, CvBridgeError
+import time
 
 from models.amodal_3D_model import Amodal3DModel
 from zed_3D_detection.msg import Box3d, Corners
@@ -30,24 +30,13 @@ class CameraCalib:
 
         self.bridge = CvBridge()
 
-        # Init subscribers
-        rospy.Subscriber("zed2i/zed_node/rgb/image_rect_color",
-                         Image, self.get_image)
-
-        # Init subscribers
-        rospy.Subscriber("zed2i/zed_node/point_cloud/cloud_registered",
-                         PointCloud2, self.get_pointcloud)
-
-        self.corner_pub2 = rospy.Publisher(
-            'corners_test', Box3d, queue_size=10)
-
         self.param_fp = rospy.get_param("~param_fp")
         with np.load(self.param_fp + '/E1.npz') as X:
             self.mtx, self.dist, self.Mat, self.tvecs = [
                 X[i] for i in ("mtx", "dist", "Mat", "tvec")]
 
         # Init the yolo model
-        self.model = YOLO(self.param_fp + '/best.pt')
+        self.model = YOLO(self.param_fp + '/best3.pt')
 
         # Init the 3D model detection model
         is_cuda = torch.cuda.is_available()
@@ -63,9 +52,25 @@ class CameraCalib:
         self.points = None
         self.cv_image = None
         self.color = None
-        # self.shape = (540, 960)
-        self.shape = (720, 1280)
+        # self.img_shape = (540, 960)
+        self.img_shape = (720, 1280)
         self.rate = rospy.Rate(10)
+
+        # Init subscribers
+        rospy.Subscriber("zed2i/zed_node/rgb/image_rect_color",
+                         Image, self.get_image)
+
+        # Init subscribers
+        rospy.Subscriber("zed2i/zed_node/point_cloud/cloud_registered",
+                         PointCloud2, self.get_pointcloud)
+
+        self.corner_pub2 = rospy.Publisher(
+            'corners_test', Box3d, queue_size=10)
+
+        self.img_pub = rospy.Publisher('accurate_image', Image, queue_size=10)
+
+        self.image_t = 0
+        self.pointcloud_t = 0
 
     def get_pointcloud(self, data):
         pc = ros_numpy.numpify(data)
@@ -75,16 +80,18 @@ class CameraCalib:
         self.points = np.stack((x, y, z), axis=2)
         # rospy.loginfo(
         #     f"the center of the camera depth is {self.points[270, 480, 2]}")
-        rgb = np.zeros((self.shape[0], self.shape[1], 3))
+        rgb = np.zeros((self.img_shape[0], self.img_shape[1], 3))
         pc = ros_numpy.point_cloud2.split_rgb_field(pc)
         rgb[:, :, 0] = pc['r']
         rgb[:, :, 1] = pc['g']
         rgb[:, :, 2] = pc['b']
         self.color = rgb / 255.0
+        self.pointcloud_t = 1e-9 * data.header.stamp.nsecs + data.header.stamp.secs
 
     def get_image(self, data):
         try:
             self.cv_image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+            self.image_t = 1e-9 * data.header.stamp.nsecs + data.header.stamp.secs
         except CvBridgeError as e:
             print(e)
 
@@ -123,6 +130,10 @@ class CameraCalib:
 
         while not rospy.is_shutdown():
             img = np.copy(self.cv_image)
+            # points = self.points
+            # t1 = self.image_t
+            # t2 = self.pointcloud_t
+            # rospy.loginfo(f"the elapsed time is {t2 - t1}")
             results = self.model(img)
 
             # visualize the segment result
@@ -132,23 +143,24 @@ class CameraCalib:
             #     cv2.waitKey(2)
 
             if results[0].masks is not None:
+
                 mask_result = results[0].masks.data.cpu().detach().numpy()
                 size = mask_result.shape
                 corner_data_send = Box3d()
                 corner_data_send.num = size[0]
+                corner_data_send.stamp = rospy.Time.now()
 
                 for num in range(size[0]):
 
                     ################################### Crop the pointcloud according to the segmentation###########################
                     conf = results[0].boxes.conf[num].cpu().detach().numpy()
-                    if conf < 0.9:
+                    if conf < 0.5:
                         continue
 
                     mask = mask_result[num]
-                    mask = cv2.resize(mask, (self.shape[1], self.shape[0]),
+                    mask = cv2.resize(mask, (self.img_shape[1], self.img_shape[0]),
                                       interpolation=cv2.INTER_LINEAR)
                     logits = np.nonzero(mask < 1)
-
                     pt_data = copy.copy(self.points)
                     pt_data[logits[0], logits[1]] = [
                         float("nan"), float("nan"), float("nan")]
@@ -165,12 +177,17 @@ class CameraCalib:
                     features = features.to(self.device, dtype=torch.float)
                     with torch.no_grad():
                         corners = self.model3D(features)
-
+                    # corners are in the centimeter unit
                     corner_to_send_test = Corners()
                     corner_to_send_test.data = np.ravel(corners[0]).tolist()
                     corner_data_send.corners_data.append(corner_to_send_test)
 
                 self.corner_pub2.publish(corner_data_send)
+                self.img_pub.publish(
+                    self.bridge.cv2_to_imgmsg(img, encoding='bgr8'))
+            else:
+                self.img_pub.publish(
+                    self.bridge.cv2_to_imgmsg(img, encoding='bgr8'))
 
         ################################################ Cropped Pointcloud visualization###############################################################
 

@@ -17,9 +17,10 @@ class visualization:
         rospy.sleep(3)
 
         # Init image subscribers
-        rospy.Subscriber("zed2i/zed_node/rgb/image_rect_color",
-                         Image, self.get_image)
-
+        # rospy.Subscriber("zed2i/zed_node/rgb/image_rect_color",
+        #                  Image, self.get_image)
+        rospy.Subscriber("accurate_image",
+                        Image, self.get_image)
         # Init corners subscribers
         rospy.Subscriber("/corners_test", Box3d, self.get_corners_data)
 
@@ -58,45 +59,52 @@ class visualization:
     def visualization(self):
         img = self.cv_image
         for index in range(self.num):
-            corner_world = self.corner_data[index]
-            corner_camera = self.Mat @ (corner_world.T) + self.tvecs
-            corner_image = (self.mtx @ corner_camera).T
-            corner = corner_image[:, :2] / corner_image[:, 2:3]
-            corner = corner.astype(int)
+            try:
+                corner_world = self.corner_data[index]
+                corner_camera = self.Mat @ (corner_world.T) + self.tvecs
+                corner_image = (self.mtx @ corner_camera).T
+                corner = corner_image[:, :2] / corner_image[:, 2:3]
+                corner = corner.astype(int)
 
-            corner1 = corner[:4, :]
-            corner2 = corner[4:8, :]
-            pt1 = corner1.reshape((-1, 1, 2))
-            pt2 = corner2.reshape((-1, 1, 2))
+                corner1 = corner[:4, :]
+                corner2 = corner[4:8, :]
+                pt1 = corner1.reshape((-1, 1, 2))
+                pt2 = corner2.reshape((-1, 1, 2))
 
-            color = self.colors[index]
-            thickness = 2
-            cv2.polylines(img, [pt1], True, color, thickness)
-            cv2.polylines(img, [pt2], True, color, thickness)
-            for i, j in zip(range(4), range(4, 8)):
-                cv2.line(img, tuple(corner[i]), tuple(
-                    corner[j]), color, thickness)
+                color = self.colors[index]
+                thickness = 2
+                cv2.polylines(img, [pt1], True, color, thickness)
+                cv2.polylines(img, [pt2], True, color, thickness)
+                for i, j in zip(range(4), range(4, 8)):
+                    cv2.line(img, tuple(corner[i]), tuple(
+                        corner[j]), color, thickness)
 
-            # # option 2 drawing
-            index1 = [1, 0, 4, 5]
-            index2 = [0, 3, 7, 4]
-            index3 = [2, 3, 7, 6]
-            index4 = [1, 2, 6, 5]
-            zero1 = np.zeros((img.shape), dtype=np.uint8)
-            zero2 = np.zeros((img.shape), dtype=np.uint8)
-            zero3 = np.zeros((img.shape), dtype=np.uint8)
-            zero4 = np.zeros((img.shape), dtype=np.uint8)
-            zero_mask1 = cv2.fillConvexPoly(zero1, corner[index1, :], color)
-            zero_mask2 = cv2.fillConvexPoly(zero2, corner[index2, :], color)
-            zero_mask3 = cv2.fillConvexPoly(zero3, corner[index3, :], color)
-            zero_mask4 = cv2.fillConvexPoly(zero4, corner[index4, :], color)
-            zeros_mask = np.array(
-                (zero_mask1 + zero_mask2 + zero_mask3 + zero_mask4))
+                # # option 2 drawing
+                index1 = [1, 0, 4, 5]
+                index2 = [0, 3, 7, 4]
+                index3 = [2, 3, 7, 6]
+                index4 = [1, 2, 6, 5]
+                zero1 = np.zeros((img.shape), dtype=np.uint8)
+                zero2 = np.zeros((img.shape), dtype=np.uint8)
+                zero3 = np.zeros((img.shape), dtype=np.uint8)
+                zero4 = np.zeros((img.shape), dtype=np.uint8)
+                zero_mask1 = cv2.fillConvexPoly(
+                    zero1, corner[index1, :], color)
+                zero_mask2 = cv2.fillConvexPoly(
+                    zero2, corner[index2, :], color)
+                zero_mask3 = cv2.fillConvexPoly(
+                    zero3, corner[index3, :], color)
+                zero_mask4 = cv2.fillConvexPoly(
+                    zero4, corner[index4, :], color)
+                zeros_mask = np.array(
+                    (zero_mask1 + zero_mask2 + zero_mask3 + zero_mask4))
 
-            alpha = 1
-            beta = 0.55
-            gamma = 0
-            img = cv2.addWeighted(img, alpha, zeros_mask, beta, gamma)
+                alpha = 1
+                beta = 0.55
+                gamma = 0
+                img = cv2.addWeighted(img, alpha, zeros_mask, beta, gamma)
+            except:
+                pass
         cv2.imshow("Image", img)
         cv2.waitKey(5)
 
