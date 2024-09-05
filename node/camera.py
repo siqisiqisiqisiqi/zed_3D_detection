@@ -36,7 +36,8 @@ class CameraCalib:
                 X[i] for i in ("mtx", "dist", "Mat", "tvec")]
 
         # Init the yolo model
-        self.model = YOLO(self.param_fp + '/best3.pt')
+        # self.model = YOLO(self.param_fp + '/best5.pt')
+        self.model = YOLO(self.param_fp + '/best6.pt')
 
         # Init the 3D model detection model
         is_cuda = torch.cuda.is_available()
@@ -44,7 +45,7 @@ class CameraCalib:
             self.device = torch.device("cuda")
         else:
             self.device = torch.device("cpu")
-
+        rospy.loginfo(f"device is {self.device}")
         self.model3D = Amodal3DModel()
         self.model3D.to(self.device)
 
@@ -149,12 +150,15 @@ class CameraCalib:
                 corner_data_send = Box3d()
                 corner_data_send.num = size[0]
                 corner_data_send.stamp = rospy.Time.now()
+                # rospy.loginfo(
+                #     f"the number of the detected peach is {size[0]}.")
 
                 for num in range(size[0]):
 
                     ################################### Crop the pointcloud according to the segmentation###########################
                     conf = results[0].boxes.conf[num].cpu().detach().numpy()
-                    if conf < 0.5:
+
+                    if conf < 0.8:
                         continue
 
                     mask = mask_result[num]

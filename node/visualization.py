@@ -20,7 +20,7 @@ class visualization:
         # rospy.Subscriber("zed2i/zed_node/rgb/image_rect_color",
         #                  Image, self.get_image)
         rospy.Subscriber("accurate_image",
-                        Image, self.get_image)
+                         Image, self.get_image)
         # Init corners subscribers
         rospy.Subscriber("/corners_test", Box3d, self.get_corners_data)
 
@@ -32,7 +32,8 @@ class visualization:
 
         # Define the color used to visualized
         self.colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255),
-                       (0, 255, 255), (255, 0, 255)]
+                       (0, 255, 255), (255, 0, 255), (255, 128, 0),
+                       (128, 0, 128), (255, 192, 203), (128, 128, 0)]
         self.corner_data = None
         self.num = 0  # num of the peach
 

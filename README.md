@@ -1,4 +1,4 @@
-# zed_3D_detection
+# zed_3d_detection
 This is the repo for zed 3D detection using customized approach in ros framework.
 
 ## Table of contents
